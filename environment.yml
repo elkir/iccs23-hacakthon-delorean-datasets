@@ -1,10 +1,17 @@
-prefix: ./env
+name: phd_ph6-02_ens-extended_analysis
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.11
+  - python>=3.11
+  # Load xarray and cfgrib
+  - xarray>=2022.12
+  - cfgrib
+
+  - cartopy>=0.21
+  
+# install notebook packages
+  - jupyter
+  - notebook
+
   - pip
-  - pip:
-    - hydra-core
-    - -r dev-requirements.txt
