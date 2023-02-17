@@ -9,7 +9,7 @@ dependencies:
   - cfgrib
 
   - cartopy>=0.21
-  
+  - shapely>=2.0.0
 # install notebook packages
   - jupyter
   - notebook
