@@ -161,7 +161,9 @@ ax[1].set_xticklabels(ax[1].get_xticklabels(), rotation=0, ha="center")
 # close to the plots
 fig.add_artist(plt.figtext(0.5, 0.90, "ENS Extended: Temperature (full resolution)", ha="center", fontsize=20))
 
-fig.savefig(dir_fig/"002-01_ens_extended_temperature.png", dpi=300)
+#overwrite only if load_full_D
+if load_full_D:
+    fig.savefig(dir_fig/"002-01_ens_extended_temperature.png", dpi=300)
 
 #%% =======================================
 ### Temperture plots as daily means
@@ -223,7 +225,9 @@ ax[1].set_xticklabels(ax[1].get_xticklabels(), rotation=0, ha="center")
 # put title for the whole figure right on top
 fig.add_artist(plt.figtext(0.5, 0.90, "ENS Extended: Daily mean temperature", ha="center", fontsize=20))
 # save and show
-fig.savefig(dir_fig/"002-02_ens_extended_daily_mean_temperature.png", dpi=300)
+#overwrite only if load_full_D
+if load_full_D:
+    fig.savefig(dir_fig/"002-02_ens_extended_daily_mean_temperature.png", dpi=300)
 
 
 #%% ------------------------------------
@@ -368,46 +372,20 @@ fig, ax = plt.subplots(1,1, figsize=(8,8))
 cval = ts1.step.values/np.timedelta64(1, 'D')
 # tile cval to match the shape of ts1 
 cval = np.tile(cval, (ts1.shape[1], ts1.shape[2], 1)).transpose(2,0,1)
-ax.scatter(ts1, ts2, s=1, c=cval,alpha=0.5)
+ax.scatter(ts1[::-1], ts2[::-1], s=1, c=cval,alpha=0.5)
 # # plot diagonal line
 ax.plot([ts1.min(), ts1.max()], [ts1.min(), ts1.max()], "--", color="gray", linewidth=1)
 # add colorbar
-cbar = fig.colorbar(plt.cm.ScalarMappable(norm=plt.Normalize(cval.min(), cval.max())), ax=ax)
+cbar  = fig.colorbar(plt.cm.ScalarMappable(norm=plt.Normalize(cval.min(), cval.max()), cmap="viridis_r"), ax=ax)
 cbar.set_label("days")
 # add labels
 ax.set_xlabel("t2m ensemble 1")
 ax.set_ylabel("t2m ensemble 2")
 # # %%
 
-# %%
-'''
-A scatter plot like this one:
-    #select random (!) sample of 16 spatial points
-    ts1 = ds.t2m.sel(number=1).isel(latitude=slice(0,100,10), longitude=slice(0,100,10))
-    ts2 = ds.t2m.sel(number=2).isel(latitude=slice(0,100,10), longitude=slice(0,100,10))
-    # # plot scatter plot of t2m ensemble 1 and 2
-    fig, ax = plt.subplots(1,1, figsize=(8,8))
-    # scatter plot but color the points by the valid time
-
-
-    cval = ts1.step.values/np.timedelta64(1, 'D')
-    # tile cval to match the shape of ts1 
-    cval = np.tile(cval, (ts1.shape[1], ts1.shape[2], 1)).transpose(2,0,1)
-    ax.scatter(ts1, ts2, s=1, c=cval,alpha=0.5)
-    # # plot diagonal line
-    ax.plot([ts1.min(), ts1.max()], [ts1.min(), ts1.max()], "--", color="gray", linewidth=1)
-    # add colorbar
-    cbar = fig.colorbar(plt.cm.ScalarMappable(norm=plt.Normalize(cval.min(), cval.max())), ax=ax)
-    cbar.set_label("days")
-    # add labels
-    ax.set_xlabel("t2m ensemble 1")
-    ax.set_ylabel("t2m ensemble 2")
-    
-But as a grid of plots each with a different variable of the ds dataset.
-
-No labels of x y axis, one colorbar for all plots
-'''
-# %%
+# %% =====================================
+### Plot scatter plot of all variables in ds
+# =======================================
 
 
 # create a grid of subplots
@@ -433,7 +411,10 @@ for i, var in enumerate(ds.data_vars):
     ax = axes[i]
     # scatter plot but color the points by the valid time
     
-    ax.scatter(s1, s2, s=1, c=cval,alpha=0.5)
+    #ax.scatter(s1, s2, s=1, c=cval,alpha=0.5)
+    # scatter from end to start
+    ax.scatter(s1[::-1], s2[::-1], s=1, c=cval,alpha=0.5, cmap="viridis")
+    
     # plot diagonal line
     ax.plot([s1.min(), s1.max()], [s1.min(), s1.max()], "--", color="gray", linewidth=1)
 
@@ -445,14 +426,96 @@ for i, var in enumerate(ds.data_vars):
     ax.set_aspect('equal', 'box')
     
     # add title
-    ax.set_title(ds[var].long_name)
+    ax.set_title(f"{ds[var].long_name} [{ds[var].units}]")
+
+# remove 16th axes and move the last three plots to the right
+fig.delaxes(axes[-1])
+    
+# add a shared colorbar (smaller size)
+cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+#invert the colorbar color order
+cbar  = fig.colorbar(plt.cm.ScalarMappable(norm=plt.Normalize(cval.min(), cval.max()), cmap="viridis_r"), cax=cbar_ax)
+cbar.set_label("days")
+
+# add a title for the whole figure
+# "Scatter plot between ensemble members 1 and 2"
+fig.suptitle(f"Scatter plot between ensemble members 1 and 2", fontsize=20)
+# save figure
+fig.savefig(dir_fig/"002-06_scatter_ensemble_1-2.png", dpi=300)
 
 
-# %%
+
+
+
+# %% ====================
+### Explore monotonically increasing variables
+# =======================
 # find which variables are only increasing
 ds_diff = ds.diff("step")
 ds_diff.where(ds_diff > 0, 0)
+# %% =====================================
+# plot a 2d map for ensembles 1 and 2 for the 200th time step, variable 10m wind speed
+
+
+
+fig, axes = plt.subplots(1,2, figsize=(15,5), subplot_kw={"projection": ccrs.PlateCarree()})
+for i, ens in enumerate([1,2]):
+    # select the axis to plot to
+    ax = axes[i]
+    # plot histogram ignoring NaNs
+    ds.isel(number=ens, step=200).w10.plot.pcolormesh(ax=ax, transform=ccrs.PlateCarree(), cmap="viridis")
+    # add title
+    ax.set_title(f"ensemble {ens}")
+    # add coastlines
+    ax.coastlines()
+    # add gridlines
+    ax.gridlines()
+# print the step date as a title
+fig.suptitle(ds.valid_time[200].values)
+
+fig, axes = plt.subplots(1,2, figsize=(15,5), subplot_kw={"projection": ccrs.PlateCarree()})
+for i, ens in enumerate([1,2]):
+    # select the axis to plot to
+    ax = axes[i]
+    # plot histogram ignoring NaNs
+    ds.isel(number=ens, step=200).w100.plot.pcolormesh(ax=ax, transform=ccrs.PlateCarree(), cmap="viridis")
+    # add title
+    ax.set_title(f"ensemble {ens}")
+    # add coastlines
+    ax.coastlines()
+    # add gridlines
+    ax.gridlines()
+# print the step date as a title
+fig.suptitle(ds.valid_time[200].values)
+
+var = "ssrd"
+fig, axes = plt.subplots(1,2, figsize=(15,5), subplot_kw={"projection": ccrs.PlateCarree()})
+for i, ens in enumerate([1,2]):
+    # select the axis to plot to
+    ax = axes[i]
+    # plot with colorbar from 0 to max
+    ds_diff.isel(number=ens, step=202)[var].plot.pcolormesh(ax=ax, transform=ccrs.PlateCarree(), cmap="magma", vmin=0)
+    # add title
+    ax.set_title(f"ensemble {ens}")
+    # add coastlines
+    ax.coastlines()
+    # add gridlines
+    ax.gridlines()
+# print the step date as a title
+fig.suptitle(ds.valid_time[202].values)
 # %%
+
+# plot the 2d map for the mean of ssrd for all ensembles and all time steps
+fig, ax = plt.subplots(figsize=(10,5), subplot_kw={"projection": ccrs.PlateCarree()})
+# plot histogram ignoring NaNs
+ds[var].isel(step=107).mean(dim=["number"]).plot.pcolormesh(ax=ax, transform=ccrs.PlateCarree(), cmap="magma")
+# add coastlines
+ax.coastlines()
+# add gridlines
+ax.gridlines()
+
+
+# %% ====================
 # plot histogram for each of the 11 variables in ds_diff in a 4x3 grid
 
 # ignore the lowest 10% and the highest 10% of the data
@@ -476,53 +539,56 @@ for i, var in enumerate(ds.data_vars):
     ax.set_yscale("log")
 
 
+# %% ====================
+## intermean average
+# =======================
 
+# find intermean average
+ds_mean = ds.mean(dim="number")
+ds_deviation = ds - ds_mean
 
+# find correlation between ensemble members for ds_deviation
 
+### Calculate:
+# repeat the above but pefrom the correlation across all variables in ds 
+# keep the step as a dimension
+corr_vars_dev = xr.Dataset()
+corr_std_vars_dev = xr.Dataset()
 
+# for all variables in ds extract the correlation time series
+for var in ds_deviation.data_vars:
+    corr_vars_dev[var],corr_std_vars_dev[var] = get_correlation_time_series(ds_deviation, var)
 
-# %%
-# plot a 2d map for ensembles 1 and 2 for the 100th time step, variable 10m wind speed
+#%% 
+## Plot:
+#line plot of all variables in the ataset in the same plot
+fig,ax = plt.subplots(1,1, figsize=(15, 10))
 
-fig, axes = plt.subplots(1,2, figsize=(15,5), subplot_kw={"projection": ccrs.PlateCarree()})
-for i, ens in enumerate([1,2]):
-    # select the axis to plot to
-    ax = axes[i]
-    # plot histogram ignoring NaNs
-    ds.isel(number=ens, step=100)[var].plot.pcolormesh(ax=ax, transform=ccrs.PlateCarree())
-    # add title
-    ax.set_title(f"ensemble {ens}")
-    # add coastlines
-    ax.coastlines()
-    # add gridlines
-    ax.gridlines()
-# print the step date as a title
-fig.suptitle(ds.val[100].values)
-# %%
+d = corr_vars_dev
+d_std = corr_std_vars_dev
+# drop z variable
+d = d.drop_vars("z")
+d_std = d_std.drop_vars("z")
 
-var = "ssrd"
-fig, axes = plt.subplots(1,2, figsize=(15,5), subplot_kw={"projection": ccrs.PlateCarree()})
-for i, ens in enumerate([1,2]):
-    # select the axis to plot to
-    ax = axes[i]
-    # plot histogram ignoring NaNs
-    ds.isel(number=ens, step=107)[var].plot.pcolormesh(ax=ax, transform=ccrs.PlateCarree(), cmap="magma")
-    # add title
-    ax.set_title(f"ensemble {ens}")
-    # add coastlines
-    ax.coastlines()
-    # add gridlines
-    ax.gridlines()
-# print the step date as a title
-fig.suptitle(ds.valid_time[107].values)
-# %%
+# plot the mean and std as error bounds
+d.to_array(dim='variable').plot.line(x="valid_time", hue="variable", linewidth=1, ax=ax)
+# plot the std as error bounds around the mean
+# match the color of the line to the color of the error bounds
+colors = [ax.lines[i].get_color() for i in range(len(d.data_vars))]
+for i, var in enumerate(d.data_vars):
+    ax.fill_between(d.valid_time, d[var] + d_std[var], d[var] - d_std[var], color=colors[i], alpha=0.5)
+# (corr_vars + corr_std_vars/2).to_array(dim='variable').plot.line(x="valid_time", hue="variable", linewidth=1, ax=ax, alpha=0.5)
+# (corr_vars - corr_std_vars/2).to_array(dim='variable').plot.line(x="valid_time", hue="variable", linewidth=1, ax=ax, alpha=0.5)
+# use long name from ds variables as legend
+plt.legend([ds[var].long_name for var in d.data_vars])
+# x tick lables horizontal and centered
+ax.set_xticklabels(ax.get_xticklabels(), rotation=0, ha="center")
+# title graph
+ax.set_title("Average Correlation between Deviation of ensembles from mean")
+# add an entry to to legend "Geopotential Height (ommited)"
+ax.legend([ds[var].long_name for var in d.data_vars]+ ["Geopotential Height (omitted)"])
 
-# plot the 2d map for the mean of ssrd for all ensembles and all time steps
-fig, ax = plt.subplots(figsize=(10,5), subplot_kw={"projection": ccrs.PlateCarree()})
-# plot histogram ignoring NaNs
-ds[var].isel(step=107).mean(dim=["number"]).plot.pcolormesh(ax=ax, transform=ccrs.PlateCarree(), cmap="magma")
-# add coastlines
-ax.coastlines()
-# add gridlines
-ax.gridlines()
+# save into the directory as everything else, same file naming convention
+fig.savefig(f"{dir}/002-07_correlation_after_subtracting_mean.png", dpi=300)
+
 # %%
