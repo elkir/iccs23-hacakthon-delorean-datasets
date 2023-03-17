@@ -1,6 +1,10 @@
 ### =======================================
 """
-Correlation all 50 datasets and modifications
+This notebook does: 
+- determine the correlation of all 50 dataset
+- looks at wind, temperature, humidity, and ssrd
+- looks at 3 levels of detail: london, UK, and full extent of the european cutout
+- (optional) looks at the correlation with respect to inter-annual variability
 """
 
 ### =======================================
@@ -15,16 +19,23 @@ import cartopy
 
 from pathlib  import Path
 
-# import my plotting functions from src/plot.py
+import sys
+sys.path.insert(0, "..")
+
+# import my stuff:
+from src.plotting.plot_ens import (colors_ens, plot_ens_lineplot,get_country_record)
+from src.data_loading.load_ens import (calculate_wind_speed,
+                                       load_ens_data_ED, average_over_shape) 
+
+# auto reload imports
+%load_ext autoreload
+%autoreload 2
 
 
 #%% wider plots
 # wider plots
 plt.rcParams['figure.figsize'] = [10, 5]
-
 from IPython.core.interactiveshell import InteractiveShell
-# #jupyter display all the output of a cell
-# InteractiveShell.ast_node_interactivity = "all"
 # just the last output
 InteractiveShell.ast_node_interactivity = "last_expr"
 
@@ -33,9 +44,11 @@ InteractiveShell.ast_node_interactivity = "last_expr"
 #%% Flags and directories
 ## Flags and directories
 # =========================================
-load_full_D = False
+load_full_D = True
 drop_wind_components = True
 validate_function = False
+if validate_function:
+    from src.tests.test_functions import validate_function_average_over_shape
 
 dir_data = Path('../ecmwf-ens')
 fn_E = dir_data /"mars_v04e_2017-01-02_Mon.grib"
@@ -46,159 +59,25 @@ dir_fig = Path('../report/figures')
 #%% Load the data
 ## Load the data
 # =========================================
-dsE = xr.load_dataset(fn_E, engine='cfgrib')
 
-if load_full_D:
-    # loading everything is slower:
-    # 51.2 s ± 6.44 s
-    dsD = xr.load_dataset(fn_D, engine='cfgrib')     
-else:
-    # filter variables out that are not needed
-    # 6.15 s ± 454 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
-    l = [xr.load_dataset(fn_D, engine='cfgrib',
-                        backend_kwargs={'filter_by_keys': {'number': i}})
-                for i in range(1,6)]
-    # combine all the datasets into one along the number dimension
-    dsD = xr.concat(l, dim="number")
-    
-# =======================================
+ds, dsD = load_ens_data_ED(fn_E, fn_D,
+                           load_full_D=load_full_D,
+                           drop_wind_components=drop_wind_components)
 
-
-# =======================================
 #%% print variables
 ## print variables
 # =========================================
 for v in ds.data_vars:
     # table format
-    print(f"{v:6s} {dsE[v].attrs['units']:10s} {dsE[v].attrs['long_name']:30s}")
-\
-#%%
-# print all attributes for the u10 variable, the v10 variable, and show which ones are the same and which ones are different
-
-varA = "u100"
-varB = "w100"
-print ("Same:")
-for k in dsE[varA].attrs:
-    if dsE[varA].attrs[k] == dsE[varB].attrs[k]:
-        print(f"  {k:20s} {dsE[varA].attrs[k]}")
-print()
-for v in [varA, varB]:
-    print(f"Different for {v}:")
-    for k in dsE[v].attrs:
-        if dsE[varA].attrs[k] != dsE[varB].attrs[k]:
-            print(f"  {k:20s} {dsE[v].attrs[k]}")
-    print()
-
-    
-#%%
-# ## Check if overlapping data is exactly the same (visually)
-# # create a plot with three subplots
-# # all are for ensemble member 1 (number=1) and variable t2m
-# # first plot is the last step of dsE
-# # second plot is the first step of dsD
-# # third plot is the first step of dsD – the last step of dsE
-#
-# def plot_subplot(data, ax, title):
-#     ax.set_title(title)
-#     data.plot(ax=ax, transform=ccrs.PlateCarree(), cbar_kwargs={"shrink": 0.6})
-#     ax.coastlines(resolution="10m")
-#
-# fig, axs = plt.subplots(1, 3, figsize=(15, 5), subplot_kw={"projection": ccrs.PlateCarree()})
-#
-# plot_subplot(dsE.t2m[2, -1] - 273.15, axs[0], "Last step of dsE")
-# plot_subplot(dsD.t2m[2, 0] - 273.15, axs[1], "First step of dsD")
-# plot_subplot(dsD.t2m[2, 0] - dsE.t2m[2,-1], axs[2], "First step of dsD - Last step of dsE")
-
-
-
-# =======================================
-#%% Combine datasets, calculate wind
-## Combine datasets, calculate wind
-# =========================================
-# check if the first step of dsD is the same as the last step of dsE across all variables,fields and (shared) ensembles
-assert (dsD.sel(number=dsE.number).isel(step=0) == dsE.isel(step=-1)).all()
-
-# combine the two datasets along the step dimension 
-ds = xr.concat([dsE[dsD.data_vars.keys()].isel(step=slice(None,-1)),
-                dsD.sel(number=dsE.number)],
-               dim="step")
-
-
-# calculate wind function
-# returns a new dataset with the wind speed variable added, for both 10m and 100m, optionally not dropping the u and v components
-# copy the shared attributes from both u and v components
-# replace the non-shared attributes with the ones for the wind speed:
-#  index: w10, w100
-#  GRIB_cfVarName, GRIB_shortName : 10si, 100si
-#  long name,GRIB_name: 10m wind speed, 100m wind speed
-#  GRIB_paramId: 207 (10m), 228249 (100m)
-def calculate_wind_speed(ds, drop_uv=True):
-    ds = ds.assign(w10=np.sqrt(ds.u10**2 + ds.v10**2))
-    ds.w10.attrs = ds.u10.attrs.copy()
-    ds.w10.attrs.update({"GRIB_cfVarName": "10si", "GRIB_shortName": "10si", "long_name": "10m wind speed", "GRIB_name": "10m wind speed", "GRIB_paramId": 207})
-    ds = ds.assign(w100=np.sqrt(ds.u100**2 + ds.v100**2))
-    ds.w100.attrs = ds.u100.attrs.copy()
-    ds.w100.attrs.update({"GRIB_cfVarName": "100si", "GRIB_shortName": "100si", "long_name": "100m wind speed", "GRIB_name": "100m wind speed", "GRIB_paramId": 228249})
-    if drop_uv:
-        ds = ds.drop(["u10", "v10", "u100", "v100"])
-    return ds
-
-ds = calculate_wind_speed(ds)
-dsD = calculate_wind_speed(dsD)
-
-
-# check if the values in step xr.DataArray are unique
-steps =(ds.step / np.timedelta64(1, 'D')).round(2)
-assert steps.size == np.unique(steps).size
-
-# =======================================
-#%% get shape of UK (from cartopy) 
-## get simple shape of UK (from cartopy) to use for cropping the xarray
-# =========================================
-import cartopy.crs as ccrs
-import cartopy.feature as cfeature
-import cartopy.io.shapereader as shpreader
-
-shpfilename = shpreader.natural_earth(resolution='110m',
-                                      category='cultural',
-                                      name='admin_0_countries')
-reader = shpreader.Reader(shpfilename)
-countries = reader.records()
-country = [country for country in countries if country.attributes['NAME_LONG'] == 'United Kingdom'][0]
-shape_uk = country.geometry
-# print what Python object the shape is
-print(type(shape_uk)) 
+    print(f"{v:6s} {ds[v].attrs['units']:10s} {ds[v].attrs['long_name']:30s}")
 
 # =======================================
 #%% function to take a xarray dataarray and average over the 2D space masked by a shape (shapely multipolygon)
 ## function to take a xarray dataarray and average over the 2D space masked by a shape (shapely multipolygon)
 # =========================================
-# # import what you need
-# apply to ds.t2m and shape_uk
-def average_over_shape(da, shape):
-    import shapely.vectorized
-    x,y = np.meshgrid(da["longitude"], da["latitude"])
-    # create a mask from the shape
-    mask = shapely.vectorized.contains(shape, x,y)
-    # average over the mask
-    return da.where(mask).mean(dim=["latitude", "longitude"])
-
 if validate_function:
-    # compare direct plot of london and an average over a small box around london and the total average
-    # use ds t2m and ensemble 1
-    box_around_london = shapely.geometry.box(-0.5, 51, 0.5, 52)
-    (ds.t2m.sel(number=1, longitude=-0.1, latitude=51.5, method="nearest") - 273.15).plot.line(x="valid_time", label="London")
-    (average_over_shape(ds.t2m.sel(number=1), box_around_london) - 273.15).plot.line(x="valid_time", label="Box around London")
-    (average_over_shape(ds.t2m.sel(number=1), shape_uk) - 273.15).plot.line(x="valid_time", label="UK")
-    (ds.t2m.sel(number=1).mean(dim=["latitude", "longitude"]) - 273.15).plot.line(x="valid_time", label="Europe")
-    plt.legend()
-    plt.show()
-    # the same for wind in a new figure
-    plt.close()
-    (ds.w10.sel(number=1, longitude=-0.1, latitude=51.5, method="nearest")).plot.line(x="valid_time", label="London")
-    (average_over_shape(ds.w10.sel(number=1), box_around_london)).plot.line(x="valid_time", label="Box around London")
-    (average_over_shape(ds.w10.sel(number=1), shape_uk)).plot.line(x="valid_time", label="UK")
-    (ds.w10.sel(number=1).mean(dim=["latitude", "longitude"])).plot.line(x="valid_time", label="Europe")
+    shape_uk = get_country_record("United Kingdom")
+    validate_function_average_over_shape(ds, shape_uk, var="t2m", number=1)
 
 # =======================================
 #%% Two temperature plots (mean and London)
@@ -667,7 +546,14 @@ fig.suptitle(f"Scatter plot between ensemble members 1 and 2", fontsize=20)
 # depends on the previous cell
 # =======================
 # find which variables are only increasing
-ds_diff = ds.diff("step")
+diff_vars = ["ssrd","strd","ssr", "ro"]
+# create a new ds_diff with the diff_vars variables only, copying the attributes, and taking the diff("step") function
+ds_diff = ds[diff_vars].copy()
+ds_diff.attrs = ds.attrs
+ds_diff = ds_diff.diff("step")
+# set all values that are not increasing to NaN
+ds_diff = ds_diff.where(ds_diff > 0, np.nan)
+
 ds_diff.where(ds_diff > 0, 0)
 
 # =====================================
