@@ -8,6 +8,9 @@ ecmwf-ens/
 # Ignore figures folder
 report/figures
 
+#
+*.pdf
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
