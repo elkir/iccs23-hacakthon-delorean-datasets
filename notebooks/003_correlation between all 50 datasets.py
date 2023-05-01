@@ -51,8 +51,8 @@ if validate_function:
     from src.tests.test_functions import validate_function_average_over_shape
 
 dir_data = Path('../data/ecmwf-ens')
-fn_E = dir_data /"mars_v04e_2017-01-02_Mon.grib"
-fn_D = dir_data /"mars_v04d_2017-01-02_Mon.grib"
+fn_E = dir_data /"mars_v05e_2017-01-02_Mon.grib"
+fn_D = dir_data /"mars_v05d_2017-01-02_Mon.grib"
 
 dir_fig = Path('../report/figures')
 # =======================================

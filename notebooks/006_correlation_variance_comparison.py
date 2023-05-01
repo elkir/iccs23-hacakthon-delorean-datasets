@@ -39,8 +39,8 @@ if validate_function:
     from src.tests.test_functions import validate_function_average_over_shape
 
 dir_data = Path('../data')
-fn_E = dir_data / "ecmwf-ens"/ "mars_v04e_2017-01-02_Mon.grib"
-fn_D = dir_data / "ecmwf-ens"/ "mars_v04d_2017-01-02_Mon.grib"
+fn_E = dir_data / "ecmwf-ens"/ "mars_v05e_2017-01-02_Mon.grib"
+fn_D = dir_data / "ecmwf-ens"/ "mars_v05d_2017-01-02_Mon.grib"
 
 fn_era5 = {
     2017: dir_data / "era5/ph4_yearly" / "europe-2017-era5.nc",
