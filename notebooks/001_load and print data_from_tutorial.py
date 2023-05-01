@@ -14,7 +14,7 @@ from pathlib  import Path
 plt.rcParams['figure.figsize'] = [10, 5]
 
 #%%
-dir_data = Path('../ecmwf-ens')
+dir_data = Path('../data/ecmwf-ens')
 fn_E = dir_data /"mars_v04e_2017-01-02_Mon.grib"
 fn_D = dir_data /"mars_v04d_2017-01-02_Mon.grib"
 #%% Load the data

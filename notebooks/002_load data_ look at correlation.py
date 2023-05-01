@@ -34,7 +34,7 @@ InteractiveShell.ast_node_interactivity = "last_expr"
 load_full_D = True
 drop_wind_components = True
 
-dir_data = Path('../ecmwf-ens')
+dir_data = Path('../data/ecmwf-ens')
 fn_E = dir_data /"mars_v04e_2017-01-02_Mon.grib"
 fn_D = dir_data /"mars_v04d_2017-01-02_Mon.grib"
 
