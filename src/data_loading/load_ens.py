@@ -74,11 +74,39 @@ def calculate_temperature_in_C(ds):
         ds.stl4.attrs = attrs
     return ds
 
+# get diff values from monotonically increasing variables
+def get_diff_values(ds, vars=["ssrd", "strd", "tp", "tcc", "ssr"]):
+    
+    ds_step = ds.step.diff(dim="step") / np.timedelta64(1, 'h')
+    def get_diff(da):
+        # preserve the order of the dimensions
+        original_dims = da.dims
+
+        # do a diff on the xarray Dataset and add the first value to the beginning
+        # to get the same shape as the original dataset
+        ddiff = da.diff(dim="step")
+        ddiff = ddiff / ds_step
+        ddiff = xr.concat([0*da.isel(step=0), ddiff], dim="step") # prepend 0 to the beginning
+        #TODO check if all atributes are correct
+        ddiff = ddiff.transpose(*original_dims)
+        ddiff.attrs = da.attrs.copy()
+        ddiff.attrs["long_name"] = f"Δ {da.attrs['long_name']}"
+        ddiff.attrs["units"] = f"{da.attrs['units']}/h"
+        return ddiff
+    
+    for var in vars:
+        if var in ds:
+            ds = ds.assign({var: get_diff(ds[var])})
+        else:
+            print(f"{var} not in dataset to calculate diff")
+            
+    return ds
 
 # Load E and D data
 
 def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
-                     drop_wind_components=True, temperature_in_C=True):
+                     drop_wind_components=True, temperature_in_C=True,
+                     calculate_diffs=True):
     dsE = xr.load_dataset(fn_E, engine='cfgrib')
 
     if load_full_D:
@@ -111,6 +139,9 @@ def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
     if temperature_in_C:
         ds = calculate_temperature_in_C(ds)
         dsD = calculate_temperature_in_C(dsD)
+    if calculate_diffs:
+        ds = get_diff_values(ds)
+        dsD = get_diff_values(dsD)
 
     # check if the values in step xr.DataArray are unique
     steps =(ds.step / np.timedelta64(1, 'D')).round(2)
@@ -125,3 +156,4 @@ def average_over_shape(da, shape):
     mask = shapely.vectorized.contains(shape, x,y)
     # average over the mask
     return da.where(mask).mean(dim=["latitude", "longitude"])
+
