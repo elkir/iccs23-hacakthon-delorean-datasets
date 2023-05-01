@@ -121,6 +121,10 @@ def plot_ens_tripleplot(ds, var, dsD=None, ax=None, load_full_D=False,
     # "ENS Extended: Wind speed (full resolution)"
     # close to the plots
     fig.suptitle(f"ENS Extended: {ds[var].attrs['long_name']} ({ds[var].attrs['units']})", fontsize=16, y=0.91)
+    if ax is None:
+        return fig, ax
+    else:
+        return ax
 
 
 # a single axis line plot
@@ -197,6 +201,11 @@ def plot_ens_lineplot(ds,var,type, dsD=None, ax=None,
     if dsD is not None:
         dsD_plot.plot.line(x="valid_time", hue="number", ax=ax, linewidth=0.5, alpha=0.3, color="grey", drawstyle=drawstyle)
     ds_plot.plot.line(x="valid_time", hue="number", ax=ax, linewidth=1,drawstyle=drawstyle)
+    
+    # set ylim to the mid 90% of the data + 5% margin #TODO is this a good idea?
+    ylim = dsD_plot.quantile([0.02, 0.98]).values if dsD is not None else ds_plot.quantile([0.02, 0.98]).values
+    ylim = ylim[0] - 0.2*(ylim[1]-ylim[0]), ylim[1] + 0.2*(ylim[1]-ylim[0])
+    ax.set_ylim(ylim)
     
     # plot dashed grey line at 0 (in the background) if 0 is in the mid 90% of the current ylim
     ylim = ax.get_ylim()

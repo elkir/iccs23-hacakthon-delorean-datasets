@@ -7,11 +7,14 @@ dependencies:
   # Load xarray and cfgrib
   - xarray>=2022.12
   - cfgrib
+  - netcdf4
+  - dask >=2022.12
 
   - cartopy>=0.21
   - shapely>=2.0.0
 # install notebook packages
   - jupyter
   - notebook
-
   - pip
+  - pip:
+    - ipympl
