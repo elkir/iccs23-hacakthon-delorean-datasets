@@ -171,7 +171,10 @@ def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
                 dim="step")
     
     # log which fields are processed based on the flags (wind, temperature, diffs)
-    logging.info(f"Processing fields: {"wind " if drop_wind_components else ""} {"temp(C)" if temperature_in_C else ""} {"diffs" if calculate_diffs else ""}")
+    logging.info(f"Processing fields: {'wind ' if drop_wind_components else ''}"
+             f"{'temperature ' if temperature_in_C else ''}"
+             f"{'diffs ' if calculate_diffs else ''}"
+             )
     ds = calculate_wind_speed(ds, drop_uv= drop_wind_components,verbose=verbose)
     dsD = calculate_wind_speed(dsD, drop_uv= drop_wind_components,verbose=verbose)
     if temperature_in_C:
