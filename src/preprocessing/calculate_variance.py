@@ -78,7 +78,7 @@ def main():
     all_ds_var_D = []
 
     logging.info(f"Processing {len(grib_files)} GRIB files")
-    for file in grib_files:
+    for i,file in enumerate(grib_files):
         logging.info(f"Processing file {i+1}/{len(grib_files)}: {file}")
         ds_var_E, ds_var_D = extract_var(file)
         all_ds_var_E.append(ds_var_E)
