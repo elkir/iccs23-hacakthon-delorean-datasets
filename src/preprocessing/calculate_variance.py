@@ -47,6 +47,7 @@ def calculate_variance(ds, vars=["t2m","d2m","stl4","ssrd","strd","w10","w100"],
     
 #ED only
 def extract_var(filenameE, start_time=None):
+    import gc
     fn2_E = filenameE
     fn2_D = re.sub(r'v(\d\d)e', r'v\1d', filenameE)
     ds, dsD = load_ens_data_ED(fn2_E, fn2_D,
@@ -61,6 +62,7 @@ def extract_var(filenameE, start_time=None):
                             ), start_time=start_time)
     dsD_var = calculate_variance(dsD,start_time=start_time)
     del ds, dsD
+    gc.collect()
     return ds_var, dsD_var
 
 
