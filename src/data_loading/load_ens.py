@@ -2,6 +2,9 @@
 import numpy as np
 import xarray as xr
 
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s- Load - %(message)s')
+
 def calculate_wind_speed(ds, drop_uv=True, verbose=False):
     """Calculate wind speed from u and v components and add it to the dataset
 
@@ -138,15 +141,18 @@ def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
                      drop_wind_components=True, temperature_in_C=True,
                      calculate_diffs=True,
                      verbose=False):
+    logging.info(f"Loading {fn_E}")
     dsE = xr.load_dataset(fn_E, engine='cfgrib')
 
     if load_full_D:
         # loading everything is slower:
         # 51.2 s ± 6.44 s
+        logging.info(f"Loading {fn_D} (full)")
         dsD = xr.load_dataset(fn_D, engine='cfgrib')     
     else:
         # filter variables out that are not needed
         # 6.15 s ± 454 ms per loop (mean ± std. dev. of 7 runs, 1 loop each) <- ERROR: this depends on file indexing
+        logging.info(f"Loading {fn_D} (reduced)")
         l = [xr.load_dataset(fn_D, engine='cfgrib',
                             backend_kwargs={'filter_by_keys': {'number': i}})
                     for i in range(1,6)]
@@ -163,8 +169,9 @@ def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
     ds = xr.concat([dsE[dsD.data_vars.keys()].isel(step=slice(None,-1)),
                     dsD.sel(number=dsE.number)],
                 dim="step")
-
-
+    
+    # log which fields are processed based on the flags (wind, temperature, diffs)
+    logging.info(f"Processing fields: {"wind " if drop_wind_components else ""} {"temp(C)" if temperature_in_C else ""} {"diffs" if calculate_diffs else ""}")
     ds = calculate_wind_speed(ds, drop_uv= drop_wind_components,verbose=verbose)
     dsD = calculate_wind_speed(dsD, drop_uv= drop_wind_components,verbose=verbose)
     if temperature_in_C:
@@ -178,6 +185,7 @@ def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
     steps =(ds.step / np.timedelta64(1, 'D')).round(2)
     assert steps.size == np.unique(steps).size
     
+    logging.info(f"Loading complete")
     return ds, dsD
 
 def average_over_shape(da, shape):
