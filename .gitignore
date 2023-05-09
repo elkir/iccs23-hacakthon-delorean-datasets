@@ -2,9 +2,7 @@ sandbox
 
 # Ignore data folder
 data/
-ecmwf-ens
-ecmwf-ens/
-.ecmwf-ens/
+
 
 # Ignore figures folder
 report/figures
