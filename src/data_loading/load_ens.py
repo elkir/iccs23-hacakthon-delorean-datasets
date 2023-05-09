@@ -2,7 +2,7 @@
 import numpy as np
 import xarray as xr
 
-def calculate_wind_speed(ds, drop_uv=True):
+def calculate_wind_speed(ds, drop_uv=True, verbose=False):
     """Calculate wind speed from u and v components and add it to the dataset
 
     Args:
@@ -44,7 +44,27 @@ def calculate_wind_speed(ds, drop_uv=True):
             ds = ds.drop(["u100", "v100"])
     return ds
 
-def calculate_temperature_in_C(ds):
+def calculate_temperature_in_C(ds, verbose=False):
+    """
+    Calculate temperature in C from K and add it to the dataset
+    
+    Args:
+        ds (xr.Dataset): Dataset containing t2m, d2m, stl4
+        verbose (bool, optional): Print verbose output. Defaults to False.
+    
+    Returns:
+        xr.Dataset: Dataset with temperature in C for t2m, d2m, stl4
+        
+        Calculate temperature function
+        returns a new dataset with the temperature variable added,
+        for t2m, d2m, stl4, optionally (not) dropping the K temperature components
+        and updating the attributes to C
+        
+        #  index: t2m, d2m, stl4
+        #  GRIB_cfVarName, GRIB_shortName : 2t, 2d, stl4
+        #  long name,GRIB_name: 2m temperature, 2m dewpoint temperature, Soil temperature level 4
+        #  GRIB_paramId: 167, 168, 235
+    """
     # check if any temperature is in the dataset
     if ("t2m" not in ds) and ("d2m" not in ds) and ("stl4" not in ds):
         print ("No temperature in dataset")
@@ -75,8 +95,17 @@ def calculate_temperature_in_C(ds):
     return ds
 
 # get diff values from monotonically increasing variables
-def get_diff_values(ds, vars=["ssrd", "strd", "tp", "tcc", "ssr"]):
-    
+def get_diff_values(ds, vars=["ssrd", "strd", "tp", "tcc", "ssr"], verbose=False):
+    """Get diff values from monotonically increasing variables
+
+    Args:
+        ds (xarray.Dataset): Dataset containing the variables
+        vars ( list , optional): Variables by index name. Defaults to ["ssrd", "strd", "tp", "tcc", "ssr"].
+        verbose (bool, optional): Printing verbose messages. Defaults to False.
+
+    Returns:
+        xr.Dataset: Dataset with the diff values for the monotonically increasing variables
+    """
     ds_step = ds.step.diff(dim="step") / np.timedelta64(1, 'h')
     def get_diff(da):
         # preserve the order of the dimensions
@@ -98,7 +127,8 @@ def get_diff_values(ds, vars=["ssrd", "strd", "tp", "tcc", "ssr"]):
         if var in ds:
             ds = ds.assign({var: get_diff(ds[var])})
         else:
-            print(f"{var} not in dataset to calculate diff")
+            if verbose:
+                print(f"{var} not in dataset to calculate diff")
             
     return ds
 
@@ -106,7 +136,8 @@ def get_diff_values(ds, vars=["ssrd", "strd", "tp", "tcc", "ssr"]):
 
 def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
                      drop_wind_components=True, temperature_in_C=True,
-                     calculate_diffs=True):
+                     calculate_diffs=True,
+                     verbose=False):
     dsE = xr.load_dataset(fn_E, engine='cfgrib')
 
     if load_full_D:
@@ -115,7 +146,7 @@ def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
         dsD = xr.load_dataset(fn_D, engine='cfgrib')     
     else:
         # filter variables out that are not needed
-        # 6.15 s ± 454 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+        # 6.15 s ± 454 ms per loop (mean ± std. dev. of 7 runs, 1 loop each) <- ERROR: this depends on file indexing
         l = [xr.load_dataset(fn_D, engine='cfgrib',
                             backend_kwargs={'filter_by_keys': {'number': i}})
                     for i in range(1,6)]
@@ -134,14 +165,14 @@ def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
                 dim="step")
 
 
-    ds = calculate_wind_speed(ds, drop_uv= drop_wind_components)
-    dsD = calculate_wind_speed(dsD, drop_uv= drop_wind_components)
+    ds = calculate_wind_speed(ds, drop_uv= drop_wind_components,verbose=verbose)
+    dsD = calculate_wind_speed(dsD, drop_uv= drop_wind_components,verbose=verbose)
     if temperature_in_C:
         ds = calculate_temperature_in_C(ds)
         dsD = calculate_temperature_in_C(dsD)
     if calculate_diffs:
-        ds = get_diff_values(ds)
-        dsD = get_diff_values(dsD)
+        ds = get_diff_values(ds,verbose=verbose)
+        dsD = get_diff_values(dsD,verbose=verbose)
 
     # check if the values in step xr.DataArray are unique
     steps =(ds.step / np.timedelta64(1, 'D')).round(2)
