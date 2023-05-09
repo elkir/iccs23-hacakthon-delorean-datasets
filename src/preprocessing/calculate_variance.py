@@ -7,11 +7,13 @@ import numpy as np
 import argparse
 
 
-from pathlib  import Path
+import logging
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 # insert path to src folder no matter from where the notebook is run
+from pathlib  import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -75,7 +77,9 @@ def main():
     all_ds_var_E = []
     all_ds_var_D = []
 
+    logging.info(f"Processing {len(grib_files)} GRIB files")
     for file in grib_files:
+        logging.info(f"Processing file {i+1}/{len(grib_files)}: {file}")
         ds_var_E, ds_var_D = extract_var(file)
         all_ds_var_E.append(ds_var_E)
         all_ds_var_D.append(ds_var_D)
@@ -83,8 +87,10 @@ def main():
     combined_ds_var_E = xr.concat(all_ds_var_E, dim="time")
     combined_ds_var_D = xr.concat(all_ds_var_D, dim="time")
 
+    logging.info(f"Saving combined datasets to {export_filename}_E.nc and {export_filename}_D.nc")
     combined_ds_var_E.to_netcdf(f"{export_filename}_E.nc")
     combined_ds_var_D.to_netcdf(f"{export_filename}_D.nc")
+    logging.info("Processing complete")
 
 if __name__ == "__main__":
     main()
