@@ -70,19 +70,19 @@ def extract_var(filenameE, start_time=None):
 def main():
     parser = argparse.ArgumentParser(description='Process GRIB files and compute variance')
     parser.add_argument('export_filename', type=str, help='Base name for the output NetCDF files')
-    parser.add_argument('grib_files', nargs='+', type=str, help='GRIB files to process')
+    parser.add_argument('grib_filesE', nargs='+', type=str, help='GRIB files to process')
     args = parser.parse_args()
 
     export_filename = args.export_filename
-    grib_files = args.grib_files
+    grib_filesE = args.grib_filesE
 
     all_ds_var_E = []
     all_ds_var_D = []
 
-    logging.info(f"Processing {len(grib_files)} GRIB files")
-    for i,file in enumerate(grib_files):
-        logging.info(f"Processing file {i+1}/{len(grib_files)}: {file}")
-        ds_var_E, ds_var_D = extract_var(file)
+    logging.info(f"Processing {len(grib_filesE)} GRIB files")
+    for i,filenameE in enumerate(grib_filesE):
+        logging.info(f"Processing file {i+1}/{len(grib_filesE)}: {filenameE}")
+        ds_var_E, ds_var_D = extract_var(filenameE)
         all_ds_var_E.append(ds_var_E)
         all_ds_var_D.append(ds_var_D)
 
