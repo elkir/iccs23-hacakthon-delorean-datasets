@@ -1,8 +1,12 @@
 sandbox
 
+
+*nohup.out
+
+
 # Ignore data folder
 data/
-
+outputs/
 
 # Ignore figures folder
 report/figures
