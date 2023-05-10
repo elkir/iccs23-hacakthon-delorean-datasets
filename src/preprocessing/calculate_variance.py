@@ -70,7 +70,7 @@ def extract_var(filenameE, start_time=None):
 def main():
     parser = argparse.ArgumentParser(description='Process GRIB files and compute variance')
     parser.add_argument('export_filename', type=str, help='Base name for the output NetCDF files')
-    parser.add_argument('grib_filesE', nargs='+', type=str, help='GRIB files to process')
+    parser.add_argument('grib_filesE', nargs='+', type=str, help='GRIB files (E) to process')
     args = parser.parse_args()
 
     export_filename = args.export_filename
