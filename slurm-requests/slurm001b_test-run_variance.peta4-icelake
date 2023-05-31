@@ -29,6 +29,9 @@
 ##SBATCH --no-requeue
 
 #! sbatch directives end here (put any additional directives above this line)
+#SBATCH --export=LOGDIR=slurm-log
+#SBATCH -o ${LOGDIR}/slurm-%j.out
+#SBATCH -e ${LOGDIR}/slurm-%j.err
 
 #! Notes:
 #! Charging is determined by cpu number*walltime.
@@ -65,12 +68,14 @@ application="src/preprocessing/calculate_variance.py"
 year="2017"
 version="v05e"
 options_output="data/outputs/06_001-ecmwf-variance_${version}_${year}"
-options_input="data/ecmwf/mars_${version}_${year}*.nc"
+options_input="data/ecmwf/mars_${version}_${year}*"
 options="$options_output $options_input"
 
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
                              # in which sbatch is run.
+LOGDIR=slurm-log
+
 
 #! Are you using OpenMP (NB this is unrelated to OpenMPI)? If so increase this
 #! safe value to no more than 76:
@@ -99,7 +104,16 @@ export I_MPI_PIN_ORDER=scatter # Adjacent domains have minimal sharing of caches
 #! (OMP_NUM_THREADS threads will be created):
 #CMD="python $application $options" 
 # add a git 
-CMD="echo 'Python version:' && python --version && echo 'Python interpreter path:' && which python && echo 'Conda environments:' && conda info --envs && echo 'Working directory:' && pwd && echo 'Git repo and branch:' && git remote -v | grep fetch | sed 's/.*\///' | sed 's/\.git.*//' && git branch | grep '*' | sed 's/* //' &&  echo 'Files to be processed:' && ls $options_input"
+CMD="echo 'Python version:' && python --version && \
+echo 'Python interpreter path:' && which python && \
+echo 'Conda environments:' && conda info --envs && \
+echo 'Conda packages:' && conda list && \
+echo 'System PATH:' && echo \$PATH && \
+echo 'Working directory:' && pwd && \
+echo 'Git repo and branch:' && \
+git remote -v | grep fetch | sed 's/.*\///' | sed 's/\.git.*//' &&\
+git branch | grep '*' | sed 's/* //' && \
+echo 'Files to be processed:' && ls $options_input"
 
 
 #! Choose this for a MPI code (possibly using OpenMP) using OpenMPI:
@@ -127,9 +141,9 @@ echo "Current directory: `pwd`"
 if [ "$SLURM_JOB_NODELIST" ]; then
         #! Create a machine file:
         export NODEFILE=`generate_pbs_nodefile`
-        cat $NODEFILE | uniq > machine.file.$JOBID
+        cat $NODEFILE | uniq > ${LOGDIR}/machine.file.$JOBID
         echo -e "\nNodes allocated:\n================"
-        echo `cat machine.file.$JOBID | sed -e 's/\..*$//g'`
+        echo `cat ${LOGDIR}/machine.file.$JOBID | sed -e 's/\..*$//g'`
 fi
 
 echo -e "\nnumtasks=$numtasks, numnodes=$numnodes, mpi_tasks_per_node=$mpi_tasks_per_node (OMP_NUM_THREADS=$OMP_NUM_THREADS)"
