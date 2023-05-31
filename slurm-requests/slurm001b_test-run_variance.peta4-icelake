@@ -10,7 +10,7 @@
 
 #! sbatch directives begin here ###############################
 #! Name of the job:
-#SBATCH -J pd423_001-variance_cpujob
+#SBATCH -J pd423_001b
 #! Which project should be charged:
 #SBATCH -A KESHAV-SL3-CPU
 #SBATCH -p icelake
@@ -29,9 +29,11 @@
 ##SBATCH --no-requeue
 
 #! sbatch directives end here (put any additional directives above this line)
-#SBATCH --export=LOGDIR=slurm-log
-#SBATCH -o ${LOGDIR}/slurm-%j.out
-#SBATCH -e ${LOGDIR}/slurm-%j.err
+##SBATCH --export=LOGDIR=slurm-log
+##SBATCH -o ${LOGDIR}/slurm-%j.out
+##SBATCH -e ${LOGDIR}/slurm-%j.err
+##SBATCH -o slurm-log/slurm-%j.out
+##SBATCH -e slurm-log/slurm-%j.err
 
 #! Notes:
 #! Charging is determined by cpu number*walltime.
@@ -113,7 +115,7 @@ echo 'Working directory:' && pwd && \
 echo 'Git repo and branch:' && \
 git remote -v | grep fetch | sed 's/.*\///' | sed 's/\.git.*//' &&\
 git branch | grep '*' | sed 's/* //' && \
-echo 'Files to be processed:' && ls $options_input"
+echo 'Files to be processed:' && echo $options_input"
 
 
 #! Choose this for a MPI code (possibly using OpenMP) using OpenMPI:
