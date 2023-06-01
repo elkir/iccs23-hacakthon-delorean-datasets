@@ -17,9 +17,9 @@ from pathlib  import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-# Check where we are, and what we have access to
-print("Cwd: ",Path.cwd())
-print("Path: ",sys.path)
+# # Check where we are, and what we have access to
+# print("Cwd: ",Path.cwd())
+# print("Path: ",sys.path)
 
 
 from src.data_loading.load_ens import (load_ens_data_ED)
