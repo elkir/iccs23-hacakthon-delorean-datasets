@@ -21,7 +21,7 @@
 #! 3380 MiB of memory per CPU.
 #SBATCH --ntasks=76
 #! How much wallclock time will be required?
-#SBATCH --time=20:00:00
+#SBATCH --time=10:00:00
 #! What types of email messages do you wish to receive?
 #SBATCH --mail-type=NONE
 #! Uncomment this to prevent the job from being requeued (e.g. if
@@ -66,7 +66,7 @@ application="src/preprocessing/calculate_variance.py"
 year="2017"
 version="v05e"
 options_output="data/outputs/06_001-ecmwf-variance_${version}_${year}"
-options_input="data/ecmwf-ens/mars_${version}_${year}*.grib"
+options_input="data/ecmwf-ens/mars_${version}_${year}-01-0{2,5}*.grib"
 options="$options_output $options_input"
 
 #! Work directory (i.e. where the job will run):

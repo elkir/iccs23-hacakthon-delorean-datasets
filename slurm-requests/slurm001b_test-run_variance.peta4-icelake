@@ -28,12 +28,12 @@
 #! interrupted by node failure or system downtime):
 ##SBATCH --no-requeue
 
-#! sbatch directives end here (put any additional directives above this line)
 ##SBATCH --export=LOGDIR=slurm-log
 ##SBATCH -o ${LOGDIR}/slurm-%j.out
 ##SBATCH -e ${LOGDIR}/slurm-%j.err
 ##SBATCH -o slurm-log/slurm-%j.out
 ##SBATCH -e slurm-log/slurm-%j.err
+#! sbatch directives end here (put any additional directives above this line)
 
 #! Notes:
 #! Charging is determined by cpu number*walltime.
@@ -62,6 +62,7 @@ module load rhel8/default-icl              # REQUIRED - loads the basic environm
 module load miniconda/3
 source /home/pd423/.bashrc-slurm
 conda activate phd_ph6-02_ens-extended_analysis
+export PATH=/home/pd423/.conda/envs/phd_ph6-02_ens-extended_analysis/bin:$PATH
 
 #! Full path to application executable: 
 application="src/preprocessing/calculate_variance.py"
@@ -70,56 +71,31 @@ application="src/preprocessing/calculate_variance.py"
 year="2017"
 version="v05e"
 options_output="data/outputs/06_001-ecmwf-variance_${version}_${year}"
-options_input="data/ecmwf/mars_${version}_${year}*"
+options_input="data/ecmwf-ens/mars_${version}_${year}*.grib"
 options="$options_output $options_input"
 
 #! Work directory (i.e. where the job will run):
-workdir="$SLURM_SUBMIT_DIR"  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
+workdir="$SLURM_SUBMIT_DIR/.."  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
                              # in which sbatch is run.
-LOGDIR=slurm-log
+LOGDIR_machine="slurm-log/machine-files"
 
 
-#! Are you using OpenMP (NB this is unrelated to OpenMPI)? If so increase this
-#! safe value to no more than 76:
 export OMP_NUM_THREADS=1
-
-#! Number of MPI tasks to be started by the application per node and in total (do not change):
 np=$[${numnodes}*${mpi_tasks_per_node}]
-
-#! The following variables define a sensible pinning strategy for Intel MPI tasks -
-#! this should be suitable for both pure MPI and hybrid MPI/OpenMP jobs:
 export I_MPI_PIN_DOMAIN=omp:compact # Domains are $OMP_NUM_THREADS cores in size
 export I_MPI_PIN_ORDER=scatter # Adjacent domains have minimal sharing of caches/sockets
-#! Notes:
-#! 1. These variables influence Intel MPI only.
-#! 2. Domains are non-overlapping sets of cores which map 1-1 to MPI tasks.
-#! 3. I_MPI_PIN_PROCESSOR_LIST is ignored if I_MPI_PIN_DOMAIN is set.
-#! 4. If MPI tasks perform better when sharing caches/sockets, try I_MPI_PIN_ORDER=compact.
 
 
-#! Uncomment one choice for CMD below (add mpirun/mpiexec options if necessary):
-
-#! Choose this for a MPI code (possibly using OpenMP) using Intel MPI.
-#CMD="mpirun -ppn $mpi_tasks_per_node -np $np $application $options"
-
-#! Choose this for a pure shared-memory OpenMP parallel program on a single node:
-#! (OMP_NUM_THREADS threads will be created):
 #CMD="python $application $options" 
-# add a git 
 CMD="echo 'Python version:' && python --version && \
 echo 'Python interpreter path:' && which python && \
 echo 'Conda environments:' && conda info --envs && \
-echo 'Conda packages:' && conda list && \
 echo 'System PATH:' && echo \$PATH && \
 echo 'Working directory:' && pwd && \
 echo 'Git repo and branch:' && \
-git remote -v | grep fetch | sed 's/.*\///' | sed 's/\.git.*//' &&\
+git remote -v | grep fetch | sed 's/.*\///' | sed 's/\.git.*//' && \
 git branch | grep '*' | sed 's/* //' && \
-echo 'Files to be processed:' && echo $options_input"
-
-
-#! Choose this for a MPI code (possibly using OpenMP) using OpenMPI:
-#CMD="mpirun -npernode $mpi_tasks_per_node -np $np $application $options"
+echo 'Files to be processed:' && ls $options "
 
 
 ###############################################################
@@ -143,9 +119,9 @@ echo "Current directory: `pwd`"
 if [ "$SLURM_JOB_NODELIST" ]; then
         #! Create a machine file:
         export NODEFILE=`generate_pbs_nodefile`
-        cat $NODEFILE | uniq > ${LOGDIR}/machine.file.$JOBID
+        cat $NODEFILE | uniq > ${LOGDIR_machine}/machine.file.$JOBID
         echo -e "\nNodes allocated:\n================"
-        echo `cat ${LOGDIR}/machine.file.$JOBID | sed -e 's/\..*$//g'`
+        echo `cat ${LOGDIR_machine}/machine.file.$JOBID | sed -e 's/\..*$//g'`
 fi
 
 echo -e "\nnumtasks=$numtasks, numnodes=$numnodes, mpi_tasks_per_node=$mpi_tasks_per_node (OMP_NUM_THREADS=$OMP_NUM_THREADS)"
