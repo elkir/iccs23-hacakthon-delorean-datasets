@@ -12,7 +12,7 @@
 #! Name of the job:
 #SBATCH -J pd423_001
 #! Which project should be charged:
-#SBATCH -A KESHAV-SL3-CPU
+#SBATCH -A COMPUTERLAB-SL2-CPU
 #SBATCH -p icelake
 #! How many whole nodes should be allocated?
 #SBATCH --nodes=1
