@@ -12,7 +12,9 @@ outputs/
 report/figures
 
 # Ignore log files but keep the folder
-slurm-logs/*
+slurm-log
+slurm-requests/example_maddie.wilkes2
+
 
 #
 *.pdf
@@ -109,4 +111,3 @@ io/
 
 # History files
 .history
-slurm-requests/example_maddie.wilkes2
