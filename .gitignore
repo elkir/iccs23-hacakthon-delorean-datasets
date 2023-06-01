@@ -11,6 +11,9 @@ outputs/
 # Ignore figures folder
 report/figures
 
+# Ignore log files but keep the folder
+slurm-logs/*
+
 #
 *.pdf
 
