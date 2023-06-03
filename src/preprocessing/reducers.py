@@ -18,8 +18,9 @@ def calculate_variance(ds, vars=default_vars,start_time=None):
 # distribution indices
 # Kotlarski, S. et al. (2014) ‘Regional climate modeling on European scales: A joint standard evaluation of the EURO-CORDEX RCM ensemble’, Geoscientific Model Development, 7(4), pp. 1297–1333. Available at: https://doi.org/10.5194/GMD-7-1297-2014.
 def spatial_mean(ds, vars=default_vars, **kwargs):
-    return ds.mean(["latitude","longitude"]) # step × number
+    # weighted by area 
+    return ds[vars].weighted(np.cos(np.deg2rad(ds.latitude))).mean(["latitude","longitude"])
 
 def calculate_climatological_spatial_mean(ds, vars=default_vars, **kwargs):
-    return ds[vars].mean(["latitude","longitude","number"]) # step 
+    return spatial_mean(ds,vars=vars).mean(["number"]) # step 
 

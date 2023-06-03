@@ -27,7 +27,7 @@
 #! Uncomment this to prevent the job from being requeued (e.g. if
 #! interrupted by node failure or system downtime):
 ##SBATCH --no-requeue
-#SBATCH --mem=10140
+#SBATCH --mem-per-cpu=20280
 
 #! sbatch directives end here (put any additional directives above this line)
 
@@ -73,7 +73,7 @@ options="$options_output $options_input"
 #! Work directory (i.e. where the job will run):
 workdir="$SLURM_SUBMIT_DIR/.."  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
                              # in which sbatch is run.
-LOGDIR_machine=machine-files
+LOGDIR_machine=slurm-log/machine-files
 
 #! Are you using OpenMP (NB this is unrelated to OpenMPI)? If so increase this
 #! safe value to no more than 76:
