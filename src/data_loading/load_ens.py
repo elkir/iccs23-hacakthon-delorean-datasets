@@ -135,12 +135,29 @@ def get_diff_values(ds, vars=["ssrd", "strd", "tp", "tcc", "ssr"], verbose=False
             
     return ds
 
-# Load E and D data
+
+# Load E and D data - match the 5 ensemble members between E and D
 
 def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
                      drop_wind_components=True, temperature_in_C=True,
                      calculate_diffs=True,
                      verbose=False):
+    """Load data from both the E and the D file - match the 5 ensemble members between E and D
+
+    Args:
+        fn_E (str): Filename of the E file
+        fn_D (str): Filename of the D file
+        load_full_D (bool, optional): Whether to load all 50 ensembles to the D dataset or only the five matching the ones on file E. Defaults to False.
+        drop_wind_components (bool, optional): Drop the U and V components of wind when computing speed. Defaults to True.
+        temperature_in_C (bool, optional): Convert temperature fields to Celsius. Defaults to True.
+        calculate_diffs (bool, optional): Calculate Δ fields for solar radiation . Defaults to True.
+        verbose (bool, optional): Print all detials of processing . Defaults to False.
+
+    Returns:
+        ds (xr.Dataset):  Dataset with the 5 ensemble members from both E and D files continous in time for the 6 weeks
+        dsD (xr.Dataset): Dataset with the 5 or 50 ensemble members from the D file. Weeks 2-6.
+    """
+    
     logging.info(f"Loading {fn_E}")
     dsE = xr.load_dataset(fn_E, engine='cfgrib')
 
@@ -190,6 +207,36 @@ def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
     
     logging.info(f"Loading complete")
     return ds, dsD
+
+# load only the 50 ensemble members from D
+def load_ens_data_D(fn_D,
+                    drop_wind_components=True, temperature_in_C=True,
+                    calculate_diffs=True,
+                    verbose=False):
+    """Load the 50 ensembles from the D file
+
+    Args:
+        fn_D (str): Filename of the D file
+        load_full_D (bool, optional): Whether to load all 50 ensembles to the D dataset or only the five matching the ones on file E. Defaults to False.
+        drop_wind_components (bool, optional): Drop the U and V components of wind when computing speed. Defaults to True.
+        temperature_in_C (bool, optional): Convert temperature fields to Celsius. Defaults to True.
+        calculate_diffs (bool, optional): Calculate Δ fields for solar radiation . Defaults to True.
+        verbose (bool, optional): Print all detials of processing . Defaults to False.
+    Returns:
+        dsD (xr.Dataset): Dataset with the 50 ensemble members from the D file. Weeks 2-6.
+    """
+    # loading everything is slower:
+    # 51.2 s ± 6.44 s
+    logging.info(f"Loading {fn_D} (full)")
+    dsD = xr.load_dataset(fn_D, engine='cfgrib')   
+
+    dsD = calculate_wind_speed(dsD, drop_uv= drop_wind_components,verbose=verbose)
+    if temperature_in_C:
+        dsD = calculate_temperature_in_C(dsD)
+    if calculate_diffs:
+        dsD = get_diff_values(dsD,verbose=verbose)
+    logging.info(f"Loading complete")
+    return dsD
 
 def average_over_shape(da, shape):
     import shapely.vectorized
