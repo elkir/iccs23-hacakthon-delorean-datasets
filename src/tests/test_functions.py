@@ -5,7 +5,7 @@ def validate_function_average_over_shape(ds, shape_uk,var="t2m", number=1):
     # use ds t2m and ensemble 1
     import shapely.geometry
     import matplotlib.pyplot as plt
-    from src.preprocessing import average_over_shape
+    from src.preprocessing.reducers import  average_over_shape 
     box_around_london = shapely.geometry.box(-0.5, 51, 0.5, 52)
     if var=="t2m":
         (ds.t2m.sel(number=1, longitude=-0.1, latitude=51.5, method="nearest") - 273.15).plot.line(x="valid_time", label="London")

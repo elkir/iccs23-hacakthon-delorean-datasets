@@ -25,7 +25,8 @@ sys.path.insert(0, "..")
 # import my stuff:
 from src.plotting.plot_ens import (colors_ens, plot_ens_lineplot,get_country_record)
 from src.data_loading.load_ens import (calculate_wind_speed,
-                                       load_ens_data_ED, average_over_shape) 
+                                       load_ens_data_ED)
+from src.preprocessing.reducers import  average_over_shape 
 
 # auto reload imports
 %load_ext autoreload

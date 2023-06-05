@@ -21,6 +21,18 @@ def spatial_mean(ds, vars=default_vars, **kwargs):
     # weighted by area 
     return ds[vars].weighted(np.cos(np.deg2rad(ds.latitude))).mean(["latitude","longitude"])
 
+
+def average_over_shape(da, shape):
+    import shapely.vectorized
+    x,y = np.meshgrid(da["longitude"], da["latitude"])
+    # create a mask from the shape
+    mask = shapely.vectorized.contains(shape, x,y)
+    # average over the mask
+    return da.where(mask).mean(dim=["latitude", "longitude"])
+
+
+
+
 def calculate_climatological_spatial_mean(ds, vars=default_vars, **kwargs):
     return spatial_mean(ds,vars=vars).mean(["number"]) # step 
 

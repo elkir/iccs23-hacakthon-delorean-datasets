@@ -238,11 +238,3 @@ def load_ens_data_D(fn_D,
     logging.info(f"Loading complete")
     return dsD
 
-def average_over_shape(da, shape):
-    import shapely.vectorized
-    x,y = np.meshgrid(da["longitude"], da["latitude"])
-    # create a mask from the shape
-    mask = shapely.vectorized.contains(shape, x,y)
-    # average over the mask
-    return da.where(mask).mean(dim=["latitude", "longitude"])
-
