@@ -12,6 +12,7 @@ dependencies:
 
   - cartopy>=0.21
   - shapely>=2.0.0
+  - seaborn>=0.11
 # install notebook packages
   - jupyter
   - notebook
