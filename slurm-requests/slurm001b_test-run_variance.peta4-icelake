@@ -1,0 +1,131 @@
+#!/bin/bash
+#!
+#! Example SLURM job script for Peta4-IceLake (Ice Lake CPUs, HDR200 IB)
+#! Last updated: Sat Jul 31 15:39:45 BST 2021
+#!
+
+#!#############################################################
+#!#### Modify the options in this section as appropriate ######
+#!#############################################################
+
+#! sbatch directives begin here ###############################
+#! Name of the job:
+#SBATCH -J pd423_001b
+#! Which project should be charged:
+#SBATCH -A KESHAV-SL3-CPU
+#SBATCH -p icelake
+#! How many whole nodes should be allocated?
+#SBATCH --nodes=1
+#! How many (MPI) tasks will there be in total? (<= nodes*76)
+#! The Ice Lake (icelake) nodes have 76 CPUs (cores) each and
+#! 3380 MiB of memory per CPU.
+#SBATCH --ntasks=76
+#! How much wallclock time will be required?
+#SBATCH --time=1:00:00
+#! What types of email messages do you wish to receive?
+#SBATCH --mail-type=NONE
+#! Uncomment this to prevent the job from being requeued (e.g. if
+#! interrupted by node failure or system downtime):
+##SBATCH --no-requeue
+
+##SBATCH --export=LOGDIR=slurm-log
+##SBATCH -o ${LOGDIR}/slurm-%j.out
+##SBATCH -e ${LOGDIR}/slurm-%j.err
+##SBATCH -o slurm-log/slurm-%j.out
+##SBATCH -e slurm-log/slurm-%j.err
+#! sbatch directives end here (put any additional directives above this line)
+
+#! Notes:
+#! Charging is determined by cpu number*walltime.
+#! The --ntasks value refers to the number of tasks to be launched by SLURM only. This
+#! usually equates to the number of MPI tasks launched. Reduce this from nodes*76 if
+#! demanded by memory requirements, or if OMP_NUM_THREADS>1.
+#! Each task is allocated 1 CPU by default, and each CPU is allocated 3380 MiB
+#! of memory. If this is insufficient, also specify
+#! --cpus-per-task and/or --mem (the latter specifies MiB per node).
+
+#! Number of nodes and tasks per node allocated by SLURM (do not change):
+numnodes=$SLURM_JOB_NUM_NODES
+numtasks=$SLURM_NTASKS
+mpi_tasks_per_node=$(echo "$SLURM_TASKS_PER_NODE" | sed -e  's/^\([0-9][0-9]*\).*$/\1/')
+#! ############################################################
+#! Modify the settings below to specify the application's environment, location 
+#! and launch method:
+
+#! Optionally modify the environment seen by the application
+#! (note that SLURM reproduces the environment at submission irrespective of ~/.bashrc):
+. /etc/profile.d/modules.sh                # Leave this line (enables the module command)
+module purge                               # Removes all modules still loaded
+module load rhel8/default-icl              # REQUIRED - loads the basic environment
+
+#! Insert additional module load commands after this line if needed:
+module load miniconda/3
+source /home/pd423/.bashrc-slurm
+conda activate phd_ph6-02_ens-extended_analysis
+export PATH=/home/pd423/.conda/envs/phd_ph6-02_ens-extended_analysis/bin:$PATH
+
+#! Full path to application executable: 
+application="src/preprocessing/calculate_variance.py"
+
+#! Run options for the application:
+year="2017"
+version="v05e"
+options_output="data/outputs/06_001-ecmwf-variance_${version}_${year}"
+options_input="data/ecmwf-ens/mars_${version}_${year}*.grib"
+options="$options_output $options_input"
+
+#! Work directory (i.e. where the job will run):
+workdir="$SLURM_SUBMIT_DIR/.."  # The value of SLURM_SUBMIT_DIR sets workdir to the directory
+                             # in which sbatch is run.
+LOGDIR_machine="slurm-log/machine-files"
+
+
+export OMP_NUM_THREADS=1
+np=$[${numnodes}*${mpi_tasks_per_node}]
+export I_MPI_PIN_DOMAIN=omp:compact # Domains are $OMP_NUM_THREADS cores in size
+export I_MPI_PIN_ORDER=scatter # Adjacent domains have minimal sharing of caches/sockets
+
+
+#CMD="python $application $options" 
+CMD="echo 'Python version:' && python --version && \
+echo 'Python interpreter path:' && which python && \
+echo 'Conda environments:' && conda info --envs && \
+echo 'System PATH:' && echo \$PATH && \
+echo 'Working directory:' && pwd && \
+echo 'Git repo and branch:' && \
+git remote -v | grep fetch | sed 's/.*\///' | sed 's/\.git.*//' && \
+git branch | grep '*' | sed 's/* //' && \
+echo 'Files to be processed:' && ls $options "
+
+
+###############################################################
+### You should not have to change anything below this line ####
+###############################################################
+
+cd $workdir
+echo -e "Changed directory to `pwd`.\n"
+###> Inserted extra 
+# Switching to the git branch
+git switch main.mirror
+git merge main
+################
+JOBID=$SLURM_JOB_ID
+
+echo -e "JobID: $JOBID\n======"
+echo "Time: `date`"
+echo "Running on master node: `hostname`"
+echo "Current directory: `pwd`"
+
+if [ "$SLURM_JOB_NODELIST" ]; then
+        #! Create a machine file:
+        export NODEFILE=`generate_pbs_nodefile`
+        cat $NODEFILE | uniq > ${LOGDIR_machine}/machine.file.$JOBID
+        echo -e "\nNodes allocated:\n================"
+        echo `cat ${LOGDIR_machine}/machine.file.$JOBID | sed -e 's/\..*$//g'`
+fi
+
+echo -e "\nnumtasks=$numtasks, numnodes=$numnodes, mpi_tasks_per_node=$mpi_tasks_per_node (OMP_NUM_THREADS=$OMP_NUM_THREADS)"
+
+echo -e "\nExecuting command:\n==================\n$CMD\n"
+
+eval $CMD 
