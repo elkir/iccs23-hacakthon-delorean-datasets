@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from ..data_loading.load_ens import average_over_shape
+from ..preprocessing.reducers import average_over_shape
 
 # color palette
 # =========================================
