@@ -1,5 +1,6 @@
 sandbox
-
+report/
+notebooks/005*
 
 *nohup.out
 
@@ -7,6 +8,7 @@ sandbox
 # Ignore data folder
 data/
 outputs/
+
 
 # Ignore figures folder
 report/figures
