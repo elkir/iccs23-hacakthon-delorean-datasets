@@ -1,5 +1,6 @@
 # delorean-datasets
 
+[Presentaion in Google Slides](https://docs.google.com/presentation/d/1mpfY3Bmu7nKKs3hsE7gQqjQxMAWsZ8AWS16ghgJVVuQ/edit#slide=id.p)
 
 Tasks:
 
