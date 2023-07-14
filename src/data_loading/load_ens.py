@@ -264,14 +264,15 @@ def load_multiple_ens_data_ED(directory, load_full_D=False,
     dsD = xr.open_mfdataset(dir.glob('mars_v05d_*.grib'), engine='cfgrib',
                             concat_dim='time', combine='nested',
                             parallel=True, chunks={'time': 3})
-    
-    ds = xr.concat([dsE[dsD.data_vars.keys()], dsD.sel(number=dsE.number)], dim="step")
+    if not load_full_D:
+        dsD = dsD.sel(number=dsE.number)
+    ds = xr.concat([dsE[dsD.data_vars.keys()], dsD], dim="step")
     ds = preprocess(ds, drop_wind_components=drop_wind_components,
                     temperature_in_C=temperature_in_C,
                     calculate_diffs=calculate_diffs, verbose=verbose)
     
      # check if the values in step xr.DataArray are unique
-    steps =(ds.step / np.timedelta64(1, 'D')).round(2)
+    steps = (ds.step / np.timedelta64(1, 'D')).round(2)
     assert steps.size == np.unique(steps).size
     
     logging.info(f"Loading complete")
