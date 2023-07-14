@@ -21,8 +21,6 @@ def average_over_shape(da, shape):
     return da.where(mask).mean(dim=["latitude", "longitude"])
 
 
-
-
 def calculate_climatological_spatial_mean(ds, vars=default_vars, **kwargs):
     return spatial_mean(ds,vars=vars).mean(["number"]) # step 
 
@@ -41,16 +39,17 @@ def cross_date_reducer_wrapper(reducer, ds, vars=default_vars):
     Wrapper for reducers that need to be applied to a cross-date dataset
     """
     # reduce over ensembles and files, but not over latitude and longitude
-    return ds[vars].groupby("valid_time").reduce(reducer, dim=['number', 'time'])
+    return ds[vars].groupby("valid_time").reduce(
+        reducer, dim=['number', 'stacked_time_step'])
 
 def cross_date_mean(ds, vars=default_vars):
     """
     Average over ensembles and time, but not over latitude and longitude
     """
-    return cross_date_reducer_wrapper('mean', ds, vars=vars)
+    return cross_date_reducer_wrapper(np.mean, ds, vars=vars)
 
 def cross_date_variance(ds, vars=default_vars):
     """
-    Average over ensembles and time, but not over latitude and longitude
+    Variance over ensembles and time, but not over latitude and longitude
     """
-    return cross_date_reducer_wrapper('var', ds, vars=vars)
+    return cross_date_reducer_wrapper(np.var, ds, vars=vars)
