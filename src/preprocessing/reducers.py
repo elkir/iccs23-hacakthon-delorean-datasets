@@ -39,7 +39,7 @@ def cross_date_reducer_wrapper(reducer, ds, vars=default_vars):
     Wrapper for reducers that need to be applied to a cross-date dataset
     """
     # reduce over ensembles and files, but not over latitude and longitude
-    return ds[vars].groupby("valid_time").reduce(
+    return ds[vars].groupby("valid_time.date").reduce(
         reducer, dim=['number', 'stacked_time_step'])
 
 def cross_date_mean(ds, vars=default_vars):
