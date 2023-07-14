@@ -240,6 +240,7 @@ def preprocess(ds, drop_wind_components=True, temperature_in_C=True,
         verbose (bool, optional): Print all detials of processing . Defaults to False.
     Returns:
         ds (xr.Dataset): Preprocessed dataset.
+        dsD (xr.Dataset): Dataset with the 5 or 50 ensemble members from the D file.
     """
     # log which fields are processed based on the flags (wind, temperature, diffs)
     logging.info(f"Processing fields: {'wind ' if drop_wind_components else ''}"
@@ -253,20 +254,36 @@ def preprocess(ds, drop_wind_components=True, temperature_in_C=True,
     return ds
  
 
-def load_multiple_ens_data_ED(directory, load_full_D=False,
-                              drop_wind_components=True, temperature_in_C=True,
-                              calculate_diffs=True, verbose=False):
-    dir = Path(directory)
+def load_multiple_ens_data_ED(dir_or_files, 
+                              load_full_D=False,
+                              drop_wind_components=True,
+                              temperature_in_C=True,
+                              calculate_diffs=True,
+                              verbose=False,
+                              version='v05',
+                              chunks={'time': 1}):
+    if type(dir_or_files) is str:
+        dir = Path(dir_or_files)
+        e_files = sorted(dir.glob(f'mars_{version}_*.grib'))
+        d_files = sorted(dir.glob(f'mars_{version}_*.grib'))
+    else:
+        e_files = dir_or_files
+        d_files = [f.replace(f"_{version}e_", f"_{version}d_") for f in e_files]
     
-    dsE = xr.open_mfdataset(dir.glob('mars_v05e_*.grib'), engine='cfgrib',
+    dsE = xr.open_mfdataset(e_files, engine='cfgrib',
                             concat_dim='time', combine='nested',
-                            parallel=True, chunks={'time': 3})
-    dsD = xr.open_mfdataset(dir.glob('mars_v05d_*.grib'), engine='cfgrib',
+                            parallel=True, chunks=chunks)
+    dsD = xr.open_mfdataset(d_files, engine='cfgrib',
                             concat_dim='time', combine='nested',
-                            parallel=True, chunks={'time': 3})
+                            parallel=True, chunks=chunks)
+
     if not load_full_D:
         dsD = dsD.sel(number=dsE.number)
-    ds = xr.concat([dsE[dsD.data_vars.keys()], dsD], dim="step")
+
+    assert (dsD.sel(number=dsE.number).isel(step=0) == dsE.isel(step=-1)).all()
+
+    ds = xr.concat([dsE[dsD.data_vars.keys()].isel(step=slice(None,-1)),
+                    dsD.sel(number=dsE.number)], dim="step")
     ds = preprocess(ds, drop_wind_components=drop_wind_components,
                     temperature_in_C=temperature_in_C,
                     calculate_diffs=calculate_diffs, verbose=verbose)
@@ -276,4 +293,4 @@ def load_multiple_ens_data_ED(directory, load_full_D=False,
     assert steps.size == np.unique(steps).size
     
     logging.info(f"Loading complete")
-    return ds
+    return ds, dsD

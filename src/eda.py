@@ -4,12 +4,11 @@ from data_loading.load_ens import *
 
 # use Dask to open multiple E files for distributed computing (1 chunk per file)
 ds = xr.open_mfdataset('../data/mars_v05e_*.grib', engine='cfgrib', concat_dim='time', combine='nested', parallel=True, chunks={'time': 3})
-ds
 
-# %%
 ds = calculate_wind_speed(ds)
 ds = calculate_temperature_in_C(ds)
 ds = get_diff_values(ds)
+ds
 
 # %%
 def calculate_wind_power(speed, C=0.612):
