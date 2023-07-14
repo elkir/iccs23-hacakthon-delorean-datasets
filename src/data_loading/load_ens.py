@@ -261,7 +261,7 @@ def load_multiple_ens_data_ED(dir_or_files,
                               calculate_diffs=True,
                               verbose=False,
                               version='v05',
-                              chunks={'time': 1}):
+                              chunks={'time': 1, 'number': 5}):
     if type(dir_or_files) is str:
         dir = Path(dir_or_files)
         e_files = sorted(dir.glob(f'mars_{version}_*.grib'))
