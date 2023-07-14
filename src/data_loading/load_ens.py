@@ -260,13 +260,18 @@ def load_multiple_ens_data_ED(directory, load_full_D=False,
     
     dsE = xr.open_mfdataset(dir.glob('mars_v05e_*.grib'), engine='cfgrib',
                             concat_dim='time', combine='nested',
-                            parallel=True, chunks={'time': 3})
+                            parallel=True, chunks={'time': 1})
     dsD = xr.open_mfdataset(dir.glob('mars_v05d_*.grib'), engine='cfgrib',
                             concat_dim='time', combine='nested',
-                            parallel=True, chunks={'time': 3})
+                            parallel=True, chunks={'time': 1})
+
     if not load_full_D:
         dsD = dsD.sel(number=dsE.number)
-    ds = xr.concat([dsE[dsD.data_vars.keys()], dsD], dim="step")
+
+    assert (dsD.sel(number=dsE.number).isel(step=0) == dsE.isel(step=-1)).all()
+
+    ds = xr.concat([dsE[dsD.data_vars.keys()].isel(step=slice(None,-1)),
+                    dsD.sel(number=dsE.number)], dim="step")
     ds = preprocess(ds, drop_wind_components=drop_wind_components,
                     temperature_in_C=temperature_in_C,
                     calculate_diffs=calculate_diffs, verbose=verbose)
@@ -276,4 +281,4 @@ def load_multiple_ens_data_ED(directory, load_full_D=False,
     assert steps.size == np.unique(steps).size
     
     logging.info(f"Loading complete")
-    return ds
+    return ds, dsD
