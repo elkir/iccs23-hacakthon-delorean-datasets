@@ -7,6 +7,14 @@
 [Google Drive](https://drive.google.com/drive/folders/13QCIuZa73SeQWAc_oKJce5ulLTMSxg0l?usp=drive_link)
 - download files into a folder `data/ecmwf-ens`
 
+## Getting Started
+
+Create a conda environment
+
+```bash
+conda env create --file environment.yml 
+```
+
 ## Tasks:
 
 - **Streamline & Extract**: Loop through the dataset, apply a "reducer" to create a single time-series (for instance, a spatial mean across ensembles) for each file, and assemble them into one comprehensive file. [Completed]
