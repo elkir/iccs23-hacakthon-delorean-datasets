@@ -2,6 +2,7 @@
 
 
 Tasks:
+
 Streamline & Extract: Loop through the dataset, apply a "reducer" to create a single time-series (for instance, a spatial mean across ensembles) for each file, and assemble them into one comprehensive file. [Completed]
 
 Mathematical Manipulation: Run a loop that applies a mathematical operation (such as deriving wind power from wind speed) to a variable and extract this data into a new file, resulting in a fresh file for every original file. [Easy]
