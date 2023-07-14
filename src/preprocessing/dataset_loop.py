@@ -28,7 +28,6 @@ load_full_D = True
 drop_wind_components = True
 calculate_diffs = True
 
-
 #%%
 
 def reducer_wrapper(filenameE, reducer, start_time=None):

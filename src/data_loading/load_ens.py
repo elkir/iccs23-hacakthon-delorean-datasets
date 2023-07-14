@@ -3,6 +3,7 @@ import numpy as np
 import xarray as xr
 
 import logging
+from pathlib import Path
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s- Load - %(message)s')
 
 def calculate_wind_speed(ds, drop_uv=True, verbose=False):
@@ -170,12 +171,9 @@ def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
         # filter variables out that are not needed
         # 6.15 s ± 454 ms per loop (mean ± std. dev. of 7 runs, 1 loop each) <- ERROR: this depends on file indexing
         logging.info(f"Loading {fn_D} (reduced)")
-        l = [xr.load_dataset(fn_D, engine='cfgrib',
-                            backend_kwargs={'filter_by_keys': {'number': i}})
-                    for i in range(1,6)]
-        # combine all the datasets into one along the number dimension
-        dsD = xr.concat(l, dim="number")
-        
+        with xr.open_dataset(fn_D, engine='cfgrib') as dsD:
+            dsD = dsD.sel(number=dsE.number).load()
+
     # =======================================
     ## Combine datasets, calculate wind
     # =========================================
@@ -184,23 +182,17 @@ def load_ens_data_ED(fn_E, fn_D, load_full_D=False,
 
     # combine the two datasets along the step dimension 
     ds = xr.concat([dsE[dsD.data_vars.keys()].isel(step=slice(None,-1)),
-                    dsD.sel(number=dsE.number)],
-                dim="step")
+                    dsD.sel(number=dsE.number)], dim="step")
     
-    # log which fields are processed based on the flags (wind, temperature, diffs)
-    logging.info(f"Processing fields: {'wind ' if drop_wind_components else ''}"
-             f"{'temperature ' if temperature_in_C else ''}"
-             f"{'diffs ' if calculate_diffs else ''}"
-             )
-    ds = calculate_wind_speed(ds, drop_uv= drop_wind_components,verbose=verbose)
-    dsD = calculate_wind_speed(dsD, drop_uv= drop_wind_components,verbose=verbose)
-    if temperature_in_C:
-        ds = calculate_temperature_in_C(ds)
-        dsD = calculate_temperature_in_C(dsD)
-    if calculate_diffs:
-        ds = get_diff_values(ds,verbose=verbose)
-        dsD = get_diff_values(dsD,verbose=verbose)
-
+    ds = preprocess(ds, drop_wind_components=drop_wind_components,
+                    temperature_in_C=temperature_in_C,
+                    calculate_diffs=calculate_diffs,
+                    verbose=verbose)
+    dsD = preprocess(dsD, drop_wind_components=drop_wind_components,
+                    temperature_in_C=temperature_in_C,
+                    calculate_diffs=calculate_diffs,
+                    verbose=verbose)
+    
     # check if the values in step xr.DataArray are unique
     steps =(ds.step / np.timedelta64(1, 'D')).round(2)
     assert steps.size == np.unique(steps).size
@@ -228,13 +220,59 @@ def load_ens_data_D(fn_D,
     # loading everything is slower:
     # 51.2 s ± 6.44 s
     logging.info(f"Loading {fn_D} (full)")
-    dsD = xr.load_dataset(fn_D, engine='cfgrib')   
-
-    dsD = calculate_wind_speed(dsD, drop_uv= drop_wind_components,verbose=verbose)
-    if temperature_in_C:
-        dsD = calculate_temperature_in_C(dsD)
-    if calculate_diffs:
-        dsD = get_diff_values(dsD,verbose=verbose)
+    dsD = xr.load_dataset(fn_D, engine='cfgrib')
+    dsD = preprocess(dsD, drop_wind_components=drop_wind_components,
+                     temperature_in_C=temperature_in_C,
+                     calculate_diffs=calculate_diffs,
+                     verbose=verbose)
     logging.info(f"Loading complete")
     return dsD
 
+def preprocess(ds, drop_wind_components=True, temperature_in_C=True,
+               calculate_diffs=True, verbose=False):
+    """Preprocess the dataset.
+    
+    Args:
+        ds (xr.Dataset): The dataset.
+        drop_wind_components (bool, optional): Drop the U and V components of wind when computing speed. Defaults to True.
+        temperature_in_C (bool, optional): Convert temperature fields to Celsius. Defaults to True.
+        calculate_diffs (bool, optional): Calculate Δ fields for solar radiation . Defaults to True.
+        verbose (bool, optional): Print all detials of processing . Defaults to False.
+    Returns:
+        ds (xr.Dataset): Preprocessed dataset.
+    """
+    # log which fields are processed based on the flags (wind, temperature, diffs)
+    logging.info(f"Processing fields: {'wind ' if drop_wind_components else ''}"
+                 f"{'temperature ' if temperature_in_C else ''}"
+                 f"{'diffs ' if calculate_diffs else ''}")
+    ds = calculate_wind_speed(ds, drop_uv= drop_wind_components,verbose=verbose)
+    if temperature_in_C:
+        ds = calculate_temperature_in_C(ds)
+    if calculate_diffs:
+        ds = get_diff_values(ds,verbose=verbose)
+    return ds
+ 
+
+def load_multiple_ens_data_ED(directory, load_full_D=False,
+                              drop_wind_components=True, temperature_in_C=True,
+                              calculate_diffs=True, verbose=False):
+    dir = Path(directory)
+    
+    dsE = xr.open_mfdataset(dir.glob('mars_v05e_*.grib'), engine='cfgrib',
+                            concat_dim='time', combine='nested',
+                            parallel=True, chunks={'time': 3})
+    dsD = xr.open_mfdataset(dir.glob('mars_v05d_*.grib'), engine='cfgrib',
+                            concat_dim='time', combine='nested',
+                            parallel=True, chunks={'time': 3})
+    
+    ds = xr.concat([dsE[dsD.data_vars.keys()], dsD.sel(number=dsE.number)], dim="step")
+    ds = preprocess(ds, drop_wind_components=drop_wind_components,
+                    temperature_in_C=temperature_in_C,
+                    calculate_diffs=calculate_diffs, verbose=verbose)
+    
+     # check if the values in step xr.DataArray are unique
+    steps =(ds.step / np.timedelta64(1, 'D')).round(2)
+    assert steps.size == np.unique(steps).size
+    
+    logging.info(f"Loading complete")
+    return ds
