@@ -254,7 +254,8 @@ def preprocess(ds, drop_wind_components=True, temperature_in_C=True,
     return ds
  
 
-def load_multiple_ens_data_ED(dir_or_files, 
+def load_multiple_ens_data_ED(dir_or_files,
+                              concat_D=True,
                               load_full_D=False,
                               drop_wind_components=True,
                               temperature_in_C=True,
@@ -264,8 +265,8 @@ def load_multiple_ens_data_ED(dir_or_files,
                               chunks={'time': 1, 'number': 5}):
     if type(dir_or_files) is str:
         dir = Path(dir_or_files)
-        e_files = sorted(dir.glob(f'mars_{version}_*.grib'))
-        d_files = sorted(dir.glob(f'mars_{version}_*.grib'))
+        e_files = sorted(dir.glob(f'mars_{version}e_*.grib'))
+        d_files = sorted(dir.glob(f'mars_{version}d_*.grib'))
     else:
         e_files = dir_or_files
         d_files = [f.replace(f"_{version}e_", f"_{version}d_") for f in e_files]
@@ -280,17 +281,16 @@ def load_multiple_ens_data_ED(dir_or_files,
     if not load_full_D:
         dsD = dsD.sel(number=dsE.number)
 
-    assert (dsD.sel(number=dsE.number).isel(step=0) == dsE.isel(step=-1)).all()
+    if concat_D:
+        assert (dsD.sel(number=dsE.number).isel(step=0) == dsE.isel(step=-1)).all()
+        ds = xr.concat([dsE[dsD.data_vars.keys()].isel(step=slice(None,-1)),
+                        dsD.sel(number=dsE.number)], dim="step")
+    else:
+        ds = dsE
 
-    ds = xr.concat([dsE[dsD.data_vars.keys()].isel(step=slice(None,-1)),
-                    dsD.sel(number=dsE.number)], dim="step")
     ds = preprocess(ds, drop_wind_components=drop_wind_components,
                     temperature_in_C=temperature_in_C,
                     calculate_diffs=calculate_diffs, verbose=verbose)
-    
-    # check if the values in step xr.DataArray are unique
-    steps = (ds.step / np.timedelta64(1, 'D')).round(2)
-    assert steps.size == np.unique(steps).size
     
     logging.info(f"Loading complete")
     return ds, dsD
