@@ -288,7 +288,7 @@ def load_multiple_ens_data_ED(dir_or_files,
                     temperature_in_C=temperature_in_C,
                     calculate_diffs=calculate_diffs, verbose=verbose)
     
-     # check if the values in step xr.DataArray are unique
+    # check if the values in step xr.DataArray are unique
     steps = (ds.step / np.timedelta64(1, 'D')).round(2)
     assert steps.size == np.unique(steps).size
     
