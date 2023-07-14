@@ -2,6 +2,11 @@
 
 [Presentation in Google Slides](https://docs.google.com/presentation/d/1mpfY3Bmu7nKKs3hsE7gQqjQxMAWsZ8AWS16ghgJVVuQ/edit#slide=id.p)
 
+
+## Sample data
+https://drive.google.com/drive/folders/13QCIuZa73SeQWAc_oKJce5ulLTMSxg0l?usp=drive_link
+download into a folder `data/ecmwf-ens`
+
 ## Tasks:
 
 - **Streamline & Extract**: Loop through the dataset, apply a "reducer" to create a single time-series (for instance, a spatial mean across ensembles) for each file, and assemble them into one comprehensive file. [Completed]
