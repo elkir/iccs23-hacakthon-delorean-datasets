@@ -43,8 +43,14 @@ def cross_date_reducer_wrapper(reducer, ds, vars=default_vars):
     # reduce over ensembles and files, but not over latitude and longitude
     return ds[vars].groupby("valid_time").reduce(reducer, dim=['number', 'time'])
 
-def cross_date_average(ds, vars=default_vars):
+def cross_date_mean(ds, vars=default_vars):
     """
     Average over ensembles and time, but not over latitude and longitude
     """
     return cross_date_reducer_wrapper('mean', ds, vars=vars)
+
+def cross_date_variance(ds, vars=default_vars):
+    """
+    Average over ensembles and time, but not over latitude and longitude
+    """
+    return cross_date_reducer_wrapper('var', ds, vars=vars)

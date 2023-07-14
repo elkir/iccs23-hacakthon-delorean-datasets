@@ -23,8 +23,10 @@ ds
 
 # %%
 # reduce the dataset to time series of spatial and ensemble means
-from preprocessing.reducers import calculate_climatological_spatial_mean
+from preprocessing.reducers import *
 time_series = calculate_climatological_spatial_mean(ds)
 time_series
 
 # %%
+cross_date_ds = cross_date_mean(ds)
+cross_date_ds
