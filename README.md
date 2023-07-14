@@ -4,8 +4,8 @@
 
 
 ## Sample data
-https://drive.google.com/drive/folders/13QCIuZa73SeQWAc_oKJce5ulLTMSxg0l?usp=drive_link
-download into a folder `data/ecmwf-ens`
+[Google Drive](https://drive.google.com/drive/folders/13QCIuZa73SeQWAc_oKJce5ulLTMSxg0l?usp=drive_link)
+- download files into a folder `data/ecmwf-ens`
 
 ## Tasks:
 
