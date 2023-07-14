@@ -36,3 +36,14 @@ def calculate_variance(ds, vars=default_vars,start_time=None):
     ds_var = ds_var.assign_coords(valid_time=ds_var.step+start_time)
     return ds_var
 
+def cross_date_reducer_wrapper(reducer, ds, vars=default_vars):
+    """
+    Wrapper for reducers that need to be applied to a cross-date dataset
+    """
+    return ds[vars].groupby("valid_time").reduce(reducer, dim=['number', 'time'])
+
+def cross_date_average(ds, vars=default_vars):
+    """
+    Average over ensembles and time, but not over latitude and longitude
+    """
+    return cross_date_reducer_wrapper('mean', ds, vars=vars)

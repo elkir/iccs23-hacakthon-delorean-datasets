@@ -2,13 +2,14 @@
 import xarray as xr
 from data_loading.load_ens import *
 
-# use Dask to open multiple E files for distributed computing (1 chunk per file)
-ds = xr.open_mfdataset('../data/mars_v05e_*.grib', engine='cfgrib', concat_dim='time', combine='nested', parallel=True, chunks={'time': 3})
+# ds = xr.open_mfdataset('../data/mars_v05e_*.grib', engine='cfgrib', concat_dim='time', combine='nested', parallel=True, chunks={'time': 3})
+# ds = xr.open_dataset('../data/mars_v05e_2017-01-09_Mon.grib', engine='cfgrib')
+# ds = calculate_wind_speed(ds)
+# ds = calculate_temperature_in_C(ds)
+# ds = get_diff_values(ds)
 
-ds = calculate_wind_speed(ds)
-ds = calculate_temperature_in_C(ds)
-ds = get_diff_values(ds)
-ds
+# use Dask to open multiple E files for distributed computing (1 chunk per file)
+ds, dsD = load_multiple_ens_data_ED('../data')
 
 # %%
 def calculate_wind_power(speed, C=0.612):
@@ -21,9 +22,9 @@ ds = ds.assign(p10=calculate_wind_power(ds['w10']),
 ds
 
 # %%
-# reduce the dataset to time series of spatial means
-from preprocessing.reducers import spatial_mean
-ds_reduced = spatial_mean(ds)
-ds_reduced
+# reduce the dataset to time series of spatial and ensemble means
+from preprocessing.reducers import calculate_climatological_spatial_mean
+time_series = calculate_climatological_spatial_mean(ds)
+time_series
 
 # %%
