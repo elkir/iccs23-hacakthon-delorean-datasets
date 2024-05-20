@@ -1,4 +1,5 @@
-# delorean-datasets
+# Hackaton project - Delorean Datasets
+_developed as part of [Institute for Climate Computing Summer School 2023](https://iccs.cam.ac.uk/events/iccs-summer-school-2023)_
 
 [Presentation in Google Slides](https://docs.google.com/presentation/d/1mpfY3Bmu7nKKs3hsE7gQqjQxMAWsZ8AWS16ghgJVVuQ/edit#slide=id.p)
 
